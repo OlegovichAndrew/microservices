@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+  order_service:
+    container_name: order_service
+    build:
+      context: ./order_service
+      dockerfile: Dockerfile
+    ports:
+      - "9999:9999"
+
+  scooter_service:
+    build:
+      context: ./scooter_service
+      dockerfile: Dockerfile
+    depends_on:
+      - "order_service"
+    ports:
+        - "5000"
+    env_file:
+      - .env
