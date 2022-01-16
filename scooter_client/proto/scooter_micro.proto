@@ -5,7 +5,7 @@ option go_package = "./;proto";
 
 
 service ScooterService {
-  rpc Register(ClientRequest) returns (stream ServerMessage) {};
+  rpc Register(stream ClientMessage) returns (stream ScooterClient) {};
   rpc Receive(stream ClientMessage) returns (ServerMessage) {};
   rpc GetAllScooters(Request) returns (ScooterList) {};
   rpc GetAllScootersByStationID(StationID) returns (ScooterList) {};
@@ -39,6 +39,15 @@ message Scooter {
   double maxWeight = 3;
   double batteryRemain = 4;
   bool canBeRent = 5;
+}
+
+message ScooterClient {
+  uint64 id = 1;
+  double latitude = 2;
+  double longitude = 3;
+  double batteryRemain = 4;
+  double destLatitude = 5;
+  double destLongitude = 6;
 }
 
 message ScooterList {
