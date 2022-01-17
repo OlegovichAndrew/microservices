@@ -18,6 +18,7 @@ var (
 )
 var chosenScooterID, chosenStationID int
 
+
 type combineForTemplate struct {
 	*proto.ScooterList
 	*proto.StationList
@@ -34,17 +35,19 @@ type Routing interface {
 
 type handler struct {
 	scooterService *service.ScooterService
+	Structure chan *proto.ScooterClient
 }
 
-func newHandler(scooterService *service.ScooterService) *handler {
+func newHandler(scooterService *service.ScooterService, structure chan *proto.ScooterClient ) *handler {
 	return &handler{
 		scooterService: scooterService,
+		Structure: structure,
 	}
 }
 
-func NewRouter(scooterService *service.ScooterService) *mux.Router {
+func NewRouter(scooterService *service.ScooterService, structure chan *proto.ScooterClient) *mux.Router {
 	router := mux.NewRouter()
-	handler := newHandler(scooterService)
+	handler := newHandler(scooterService, structure)
 	router.HandleFunc(`/scooters`, handler.getAllScooters).Methods("GET")
 	router.HandleFunc(`/scooter/{`+scooterIDKey+`}`, handler.getScooterById).Methods("GET")
 	router.HandleFunc(`/start-trip/{`+stationIDKey+`}`, handler.showTripPage).Methods("GET")
@@ -82,42 +85,72 @@ func (h *handler) getScooterById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) startScooterTrip(w http.ResponseWriter, r *http.Request) {
+	//var stream proto.ScooterService_RegisterServer
 	//userID is a temporary value
-	userID := 3
+	//userID := 3
 
-	statusStart, err := h.scooterService.CreateScooterStatusInRent(context.Background(),
-		&proto.ScooterID{Id: uint64(chosenScooterID)})
-	if err != nil {
+	//for _, v := range httpServer.ScooterIdMap {
+	//	if v != nil {
+	//		stream = v
+	//	}
+	//}
+	scooterStatus, err  := h.scooterService.GetScooterStatus(context.Background(), &proto.ScooterID{Id: uint64(chosenScooterID)})
+	if err!=nil {
+		fmt.Println(err)
+	}
+	station,err  := h.scooterService.GetStationById(context.Background(), &proto.StationID{Id: uint64(chosenStationID)})
+	if err!=nil {
 		fmt.Println(err)
 	}
 
-	err = h.scooterService.InitAndRun(context.Background(), &proto.ScooterID{Id: uint64(chosenScooterID)},
-		&proto.StationID{Id: uint64(chosenStationID)})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	scooterForClient := proto.ScooterClient{Id: uint64(chosenScooterID), Latitude:scooterStatus.Latitude,
+		Longitude: scooterStatus.Longitude, BatteryRemain: scooterStatus.BatteryRemain,
+		DestLatitude: station.Latitude, DestLongitude: station.Longitude}
 
-	fmt.Println("StatusEnd creating...")
-	statusEnd, err := h.scooterService.CreateScooterStatusInRent(context.Background(),
-		&proto.ScooterID{Id: uint64(chosenScooterID)})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		fmt.Println(err)
-		return
-	}
+	fmt.Printf("SCooterForClient: %v", scooterForClient)
 
-	fmt.Println("StatusEnd created...")
-	tripInfo := &proto.TripInfo{ScooterID: uint64(chosenScooterID), UserID: uint64(userID),
-		StatusStartID: statusStart.Id,
-		StatusEndID:   statusEnd.Id}
-	tripOrder, err := h.scooterService.Order.CreateOrder(context.Background(), tripInfo)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(tripOrder)
+	//err = httpServer.Register(stream)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	h.Structure <- &scooterForClient
+	fmt.Println("Data has been sent")
+
+
+	//statusStart, err := h.scooterService.CreateScooterStatusInRent(context.Background(),
+	//	&proto.ScooterID{Id: uint64(chosenScooterID)})
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+
+
+	//err = h.scooterService.InitAndRun(context.Background(), &proto.ScooterID{Id: uint64(chosenScooterID)},
+	//	&proto.StationID{Id: uint64(chosenStationID)})
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+
+	//fmt.Println("StatusEnd creating...")
+	//statusEnd, err := h.scooterService.CreateScooterStatusInRent(context.Background(),
+	//	&proto.ScooterID{Id: uint64(chosenScooterID)})
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	fmt.Println(err)
+	//	return
+	//}
+
+	//fmt.Println("StatusEnd created...")
+	//tripInfo := &proto.TripInfo{ScooterID: uint64(chosenScooterID), UserID: uint64(userID),
+	//	StatusStartID: statusStart.Id,
+	//	StatusEndID:   statusEnd.Id}
+	//tripOrder, err := h.scooterService.Order.CreateOrder(context.Background(), tripInfo)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	fmt.Println(err)
+	//	return
+	//}
+	//fmt.Println(tripOrder)
 }
 
 func (h *handler) showTripPage(w http.ResponseWriter, r *http.Request) {
@@ -136,7 +169,7 @@ func (h *handler) showTripPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles("../scooter_service/templates/scooter-run.html")
+	tmpl, err := template.ParseFiles("../scooter_server/templates/scooter-run.html")
 	if err != nil {
 		fmt.Println(err)
 	}
