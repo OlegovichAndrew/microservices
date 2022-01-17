@@ -5,7 +5,6 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
@@ -42,8 +41,6 @@ func main() {
 	server := grpc.NewServer()
 	proto.RegisterOrderServiceServer(server, service)
 	reflection.Register(server)
-
-	peer.FromContext()
 
 	if err := server.Serve(listener); err != nil {
 		log.Panicf("%s: failed to start grpc - %v", "order_micro", err)

@@ -38,7 +38,7 @@ func main() {
 
 func scootersInit() {
 	fmt.Println("scooter containers creating...")
-	command := exec.Command("docker-compose", "up", "-d", "--scale", "scooter_service=" + count)
+	command := exec.Command("docker-compose", "up", "-d", "--scale", "scooter_client=" + count)
 	fmt.Println(command.String())
 	err := command.Run()
 	if err != nil {

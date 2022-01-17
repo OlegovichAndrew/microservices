@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.17.3
-// source: proto/scooter_micro.proto
+// source: scooter_micro.proto
 
 package proto
 
@@ -22,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ScooterServiceClient interface {
-	Register(ctx context.Context, in *ClientRequest, opts ...grpc.CallOption) (ScooterService_RegisterClient, error)
+	Register(ctx context.Context, opts ...grpc.CallOption) (ScooterService_RegisterClient, error)
 	Receive(ctx context.Context, opts ...grpc.CallOption) (ScooterService_ReceiveClient, error)
 	GetAllScooters(ctx context.Context, in *Request, opts ...grpc.CallOption) (*ScooterList, error)
 	GetAllScootersByStationID(ctx context.Context, in *StationID, opts ...grpc.CallOption) (*ScooterList, error)
@@ -42,23 +42,18 @@ func NewScooterServiceClient(cc grpc.ClientConnInterface) ScooterServiceClient {
 	return &scooterServiceClient{cc}
 }
 
-func (c *scooterServiceClient) Register(ctx context.Context, in *ClientRequest, opts ...grpc.CallOption) (ScooterService_RegisterClient, error) {
+func (c *scooterServiceClient) Register(ctx context.Context, opts ...grpc.CallOption) (ScooterService_RegisterClient, error) {
 	stream, err := c.cc.NewStream(ctx, &ScooterService_ServiceDesc.Streams[0], "/proto.ScooterService/Register", opts...)
 	if err != nil {
 		return nil, err
 	}
 	x := &scooterServiceRegisterClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
 	return x, nil
 }
 
 type ScooterService_RegisterClient interface {
-	Recv() (*ServerMessage, error)
+	Send(*ClientMessage) error
+	Recv() (*ScooterClient, error)
 	grpc.ClientStream
 }
 
@@ -66,8 +61,12 @@ type scooterServiceRegisterClient struct {
 	grpc.ClientStream
 }
 
-func (x *scooterServiceRegisterClient) Recv() (*ServerMessage, error) {
-	m := new(ServerMessage)
+func (x *scooterServiceRegisterClient) Send(m *ClientMessage) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *scooterServiceRegisterClient) Recv() (*ScooterClient, error) {
+	m := new(ScooterClient)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -184,7 +183,7 @@ func (c *scooterServiceClient) GetAllStations(ctx context.Context, in *Request, 
 // All implementations must embed UnimplementedScooterServiceServer
 // for forward compatibility
 type ScooterServiceServer interface {
-	Register(*ClientRequest, ScooterService_RegisterServer) error
+	Register(ScooterService_RegisterServer) error
 	Receive(ScooterService_ReceiveServer) error
 	GetAllScooters(context.Context, *Request) (*ScooterList, error)
 	GetAllScootersByStationID(context.Context, *StationID) (*ScooterList, error)
@@ -201,7 +200,7 @@ type ScooterServiceServer interface {
 type UnimplementedScooterServiceServer struct {
 }
 
-func (UnimplementedScooterServiceServer) Register(*ClientRequest, ScooterService_RegisterServer) error {
+func (UnimplementedScooterServiceServer) Register(ScooterService_RegisterServer) error {
 	return status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
 func (UnimplementedScooterServiceServer) Receive(ScooterService_ReceiveServer) error {
@@ -245,15 +244,12 @@ func RegisterScooterServiceServer(s grpc.ServiceRegistrar, srv ScooterServiceSer
 }
 
 func _ScooterService_Register_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ClientRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(ScooterServiceServer).Register(m, &scooterServiceRegisterServer{stream})
+	return srv.(ScooterServiceServer).Register(&scooterServiceRegisterServer{stream})
 }
 
 type ScooterService_RegisterServer interface {
-	Send(*ServerMessage) error
+	Send(*ScooterClient) error
+	Recv() (*ClientMessage, error)
 	grpc.ServerStream
 }
 
@@ -261,8 +257,16 @@ type scooterServiceRegisterServer struct {
 	grpc.ServerStream
 }
 
-func (x *scooterServiceRegisterServer) Send(m *ServerMessage) error {
+func (x *scooterServiceRegisterServer) Send(m *ScooterClient) error {
 	return x.ServerStream.SendMsg(m)
+}
+
+func (x *scooterServiceRegisterServer) Recv() (*ClientMessage, error) {
+	m := new(ClientMessage)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func _ScooterService_Receive_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -480,6 +484,7 @@ var ScooterService_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "Register",
 			Handler:       _ScooterService_Register_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
 		},
 		{
 			StreamName:    "Receive",
@@ -487,5 +492,5 @@ var ScooterService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "proto/scooter_micro.proto",
+	Metadata: "scooter_micro.proto",
 }

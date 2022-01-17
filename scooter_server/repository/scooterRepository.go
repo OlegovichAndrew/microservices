@@ -167,26 +167,21 @@ func (scr *ScooterRepo) GetStationById(ctx context.Context, id *proto.StationID)
 
 //GetScooterStatus returns the ScooterStatus model of the chosen scooter by its ID.
 func (scr *ScooterRepo) GetScooterStatus(ctx context.Context, id *proto.ScooterID) (*proto.ScooterStatus, error) {
-	var scooterStatus = &proto.ScooterStatus{}
-	scooter, err := scr.GetScooterById(ctx, id)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
-	scooterStatus.Scooter = scooter
+	var scooterStatus = proto.ScooterStatus{}
+
 
 	querySQL := `SELECT battery_remain, latitude, longitude 
 					FROM scooter_statuses
 					WHERE scooter_id=$1`
 
 	row := scr.db.QueryRowContext(ctx, querySQL, int(id.Id))
-	err = row.Scan(&scooterStatus.BatteryRemain,
+	err := row.Scan(&scooterStatus.BatteryRemain,
 		&scooterStatus.Latitude, &scooterStatus.Longitude)
 	if err != nil {
 		return nil, err
 	}
 
-	return scooterStatus, nil
+	return &scooterStatus, nil
 }
 
 //CreateScooterStatusInRent creates a new record in ScooterStatusesInRent by scooter's ID and returns the
