@@ -16,8 +16,8 @@ var (
 	scooterIDKey = "scooterId"
 	stationIDKey = "stationId"
 )
-var chosenScooterID, chosenStationID int
 
+var chosenScooterID, chosenStationID int
 
 type combineForTemplate struct {
 	*proto.ScooterList
@@ -85,15 +85,10 @@ func (h *handler) getScooterById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) startScooterTrip(w http.ResponseWriter, r *http.Request) {
-	//var stream proto.ScooterService_RegisterServer
 	//userID is a temporary value
 	//userID := 3
 
-	//for _, v := range httpServer.ScooterIdMap {
-	//	if v != nil {
-	//		stream = v
-	//	}
-	//}
+
 	scooterStatus, err  := h.scooterService.GetScooterStatus(context.Background(), &proto.ScooterID{Id: uint64(chosenScooterID)})
 	if err!=nil {
 		fmt.Println(err)
@@ -107,7 +102,7 @@ func (h *handler) startScooterTrip(w http.ResponseWriter, r *http.Request) {
 		Longitude: scooterStatus.Longitude, BatteryRemain: scooterStatus.BatteryRemain,
 		DestLatitude: station.Latitude, DestLongitude: station.Longitude}
 
-	fmt.Printf("SCooterForClient: %v", scooterForClient)
+	fmt.Printf("ScooterForClient: %v\n", &scooterForClient)
 
 	h.StructureCh <- &scooterForClient
 	fmt.Println("Data has been sent")

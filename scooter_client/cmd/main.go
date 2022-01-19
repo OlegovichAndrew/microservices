@@ -7,7 +7,6 @@ import (
 	"google.golang.org/grpc"
 	"io"
 	"log"
-	"net"
 	"os"
 	"scooter_client/model"
 	"scooter_client/proto"
@@ -18,8 +17,10 @@ import (
 var destination model.Location
 
 func main() {
-	conn, err := grpc.DialContext(context.Background(), net.JoinHostPort("", os.Getenv("GRPC_PORT")),
-		grpc.WithInsecure())
+	//conn, err := grpc.DialContext(context.Background(), net.JoinHostPort("dns:///scooter_server",
+	//	os.Getenv("GRPC_PORT")),
+	//	grpc.WithInsecure())
+	conn, err := grpc.Dial("dns:///scooter_server:9000", grpc.WithInsecure() )
 	if err != nil {
 		log.Printf("gRPC connection to %v port failed. With: %v\n", os.Getenv("GRPC_PORT"), err)
 	}
@@ -36,8 +37,6 @@ func main() {
 	done := make(chan bool)
 
 	scooterClient := service.NewScooterClient(0, 0.0, 0.0, 0.0, stream)
-
-	fmt.Printf("This is a scooter client: %v\n", scooterClient)
 
 	go func() {
 		for {

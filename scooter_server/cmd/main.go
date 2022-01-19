@@ -24,11 +24,12 @@ var StructCh = make(chan *proto.ScooterClient)
 
 func main() {
 	log.Println("Starting scooter microservice")
-	connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("PG_HOST"),
-		os.Getenv("PG_PORT"),
+	//connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	connectionString := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
 		os.Getenv("POSTGRES_USER"),
 		os.Getenv("POSTGRES_PASSWORD"),
+		os.Getenv("PG_HOST"),
+		os.Getenv("PG_PORT"),
 		os.Getenv("POSTGRES_DB"))
 
 	db, err := sql.Open("postgres", connectionString)
@@ -45,6 +46,7 @@ func main() {
 	}
 
 	log.Printf("gRPC connected port: %v.", os.Getenv("ORDER_GRPC_PORT"))
+
 	orderClient := proto.NewOrderServiceClient(conn)
 	scooterService := service.NewScooterService(scooterRepo, orderClient)
 	scooterList, err := scooterService.GetAllScooters(context.Background(), &proto.Request{})
