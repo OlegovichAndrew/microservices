@@ -7,7 +7,6 @@ import (
 	"google.golang.org/grpc"
 	"io"
 	"log"
-	"net"
 	"os"
 	"scooter_client/model"
 	"scooter_client/proto"
@@ -15,23 +14,13 @@ import (
 	"time"
 )
 
-func main() {
-	//log.Println("Starting scooter client")
-	//connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-	//	config.PG_HOST,
-	//	config.PG_PORT,
-	//	config.POSTGRES_USER,
-	//	config.POSTGRES_PASSWORD,
-	//	config.POSTGRES_DB)
-	//
-	//db, err := sql.Open("postgres", connectionString)
-	//if err != nil {
-	//	log.Panicf("%s: failed to open db connection - %v", "order_micro", err)
-	//}
-	//defer db.Close()
+var destination model.Location
 
-	conn, err := grpc.DialContext(context.Background(), net.JoinHostPort("", os.Getenv("GRPC_PORT")),
-		grpc.WithInsecure())
+func main() {
+	//conn, err := grpc.DialContext(context.Background(), net.JoinHostPort("dns:///scooter_server",
+	//	os.Getenv("GRPC_PORT")),
+	//	grpc.WithInsecure())
+	conn, err := grpc.Dial("dns:///scooter_server:9000", grpc.WithInsecure() )
 	if err != nil {
 		log.Printf("gRPC connection to %v port failed. With: %v\n", os.Getenv("GRPC_PORT"), err)
 	}
@@ -44,25 +33,21 @@ func main() {
 		log.Fatalf("open stream error %v", err)
 	}
 
-	//ctx := stream.Context()
+	ctx := stream.Context()
 	done := make(chan bool)
-	inClient := make(chan int)
-	var destination model.Location
+
 	scooterClient := service.NewScooterClient(0, 0.0, 0.0, 0.0, stream)
-
-	fmt.Printf("This is a scooter client: %v\n", scooterClient)
-
 
 	go func() {
 		for {
 			resp, err := stream.Recv()
 			if err == io.EOF {
-				//close(done)
+				close(done)
 				fmt.Println(err)
 				return
 			}
 
-			fmt.Printf("!!!!!!!!!!!!Received from server: %v\n", resp)
+			fmt.Printf("!Received from server: %v\n", resp)
 
 			if err != nil {
 				log.Fatalf("can not receive %v", err)
@@ -79,12 +64,18 @@ func main() {
 			fmt.Printf("Scooter client is:%v\n", scooterClient)
 			fmt.Printf("Destination is:%v\n", scooterClient)
 
-			inClient <- 1
 		}
 	}()
 
 	go func() {
-		for scooterClient.ID == 0 {
+		for {
+			if scooterClient.ID != 0 {
+				err = scooterClient.Run(destination)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+
 			msg := &proto.ClientMessage{
 				Id:        scooterClient.ID,
 				Latitude:  scooterClient.Latitude,
@@ -99,23 +90,16 @@ func main() {
 
 			time.Sleep(time.Second * 3)
 
-			if scooterClient.ID != 0 {
-				err = scooterClient.Run(destination)
-				if err != nil {
-					fmt.Println(err)
-				}
-			}
 		}
 	}()
 
-
-	//go func() {
-	//	<-ctx.Done()
-	//	if err := ctx.Err(); err != nil {
-	//		log.Println(err)
-	//	}
-	//	close(done)
-	//}()
+	go func() {
+		<-ctx.Done()
+		if err := ctx.Err(); err != nil {
+			log.Println(err)
+		}
+		close(done)
+	}()
 
 	<-done
 

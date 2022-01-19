@@ -31,7 +31,7 @@ func main() {
 		fmt.Println(err)
 	}
 
-	fmt.Printf("There are %v scooters into Database\n", count)
+	fmt.Printf("There are %v scooters into the Database\n", count)
 
 	scootersInit()
 }

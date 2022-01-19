@@ -20,8 +20,6 @@ type ScooterClient struct {
 	Latitude      float64
 	Longitude     float64
 	BatteryRemain float64
-	//some changes happened here
-	//Stream        proto.ScooterService_ReceiveClient
 	Stream proto.ScooterService_RegisterClient
 }
 
@@ -48,7 +46,7 @@ func (s *ScooterClient) GrpcScooterMessage() {
 		Longitude: s.Longitude,
 	}
 
-	fmt.Printf("Send to server this message: %v\n", msg)
+	fmt.Printf("Send to server this message: %v\n", &msg)
 	err := s.Stream.Send(&msg)
 	if err != nil {
 		fmt.Println(err)

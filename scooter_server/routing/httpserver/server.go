@@ -136,7 +136,7 @@ func (s *Server) Register(stream proto.ScooterService_RegisterServer) error {
 			err = status.Errorf(codes.Internal, "unexpected error %v", err)
 		}
 
-		fmt.Printf("This is msg:%v\n before condition", msg)
+		fmt.Printf("This is msg:%v before condition\n", msg)
 
 		if msg.Id > 0 {
 			fmt.Printf("InLoop received MSG:%v\n", err)
@@ -182,7 +182,6 @@ func (s *Server) run() {
 		for {
 			select {
 			case msg := <-s.in:
-				fmt.Printf("Message:%v", msg)
 				var buf bytes.Buffer
 				json.NewEncoder(&buf).Encode(msg)
 
