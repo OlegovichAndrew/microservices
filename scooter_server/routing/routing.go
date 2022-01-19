@@ -109,10 +109,6 @@ func (h *handler) startScooterTrip(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("SCooterForClient: %v", scooterForClient)
 
-	//err = httpServer.Register(stream)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
 	h.StructureCh <- &scooterForClient
 	fmt.Println("Data has been sent")
 
