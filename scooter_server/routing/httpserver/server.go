@@ -38,7 +38,7 @@ type Server struct {
 	taken           map[int]bool
 	codes           map[int]int
 	in              chan *proto.ClientMessage
-	Structure       chan *proto.ScooterClient
+	StructureCh     chan *proto.ScooterClient
 	ScooterIdMap    map[uint64]proto.ScooterService_RegisterServer
 	*proto.UnimplementedScooterServiceServer
 }
@@ -46,7 +46,7 @@ type Server struct {
 type Option func(*Server)
 
 //New creates and starts the http-server
-func New(handler http.Handler, opts ...Option) *Server {
+func New(handler http.Handler, structure chan *proto.ScooterClient, opts ...Option) *Server {
 	httpServer := &http.Server{
 		Handler:      handler,
 		ReadTimeout:  defaultReadTimeout,
@@ -63,7 +63,7 @@ func New(handler http.Handler, opts ...Option) *Server {
 		taken:           make(map[int]bool),
 		codes:           make(map[int]int),
 		in:              make(chan *proto.ClientMessage),
-		Structure:       make(chan *proto.ScooterClient),
+		StructureCh:     structure,
 		ScooterIdMap:    make(map[uint64]proto.ScooterService_RegisterServer),
 	}
 
@@ -128,33 +128,33 @@ func (s *Server) MatchStreamToScooterId(ctx context.Context, stream proto.Scoote
 func (s *Server) Register(stream proto.ScooterService_RegisterServer) error {
 	s.MatchStreamToScooterId(context.Background(), stream)
 	fmt.Println(s.ScooterIdMap)
-	go func() {
-		for {
-			msg, err := stream.Recv()
-			if err != nil {
-				//fmt.Printf("Error: %v", err)
-				err = status.Errorf(codes.Internal, "unexpected error %v", err)
-			}
 
-			if msg.GetId() != 0 {
-				s.in <- msg
-			}
-			continue
+	for {
+		msg, err := stream.Recv()
+		if err != nil {
+			fmt.Printf("Error: %v", err)
+			err = status.Errorf(codes.Internal, "unexpected error %v", err)
 		}
-	}()
 
-	go func() {
+		fmt.Printf("This is msg:%v\n before condition", msg)
+
+		if msg.Id > 0 {
+			fmt.Printf("InLoop received MSG:%v\n", err)
+			s.in <- msg
+		}
+
 		select {
-		case data := <- s.Structure:
-			err := stream.Send(data)
+		case data := <-s.StructureCh:
+			fmt.Printf("Data has been received : %v", data)
+			scoot := &proto.ScooterClient{Id: data.Id, Latitude: data.Latitude, Longitude: data.Longitude,
+				BatteryRemain: data.BatteryRemain, DestLatitude: data.DestLatitude, DestLongitude: data.DestLongitude}
+			err = stream.Send(scoot)
 			if err != nil {
 				log.Printf("send error %v", err)
 			}
+		default:
 		}
-
-	}()
-
-	return nil
+	}
 }
 
 //Receive is the function which receive a message from the gRPC stream and direct it to the Server's 'in' channel.
@@ -182,6 +182,7 @@ func (s *Server) run() {
 		for {
 			select {
 			case msg := <-s.in:
+				fmt.Printf("Message:%v", msg)
 				var buf bytes.Buffer
 				json.NewEncoder(&buf).Encode(msg)
 

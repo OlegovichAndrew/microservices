@@ -46,35 +46,60 @@ func main() {
 
 	//ctx := stream.Context()
 	done := make(chan bool)
+	inClient := make(chan int)
 	var destination model.Location
 	scooterClient := service.NewScooterClient(0, 0.0, 0.0, 0.0, stream)
 
-	fmt.Printf("This is a scoote client: %v", scooterClient)
-
-
-		go func() {
-			for  {
-				fmt.Println("executing run in client")
-				msg := &proto.ClientMessage{
-					Id:        scooterClient.ID,
-					Latitude:  scooterClient.Latitude,
-					Longitude: scooterClient.Longitude,
-				}
-
-				fmt.Printf("Send to server this message: %v\n", msg)
-				err := scooterClient.Stream.Send(msg)
-				if err != nil {
-					fmt.Println(err)
-				}
-				time.Sleep(time.Second * 3)
-			}
-		}()
-
+	fmt.Printf("This is a scooter client: %v\n", scooterClient)
 
 
 	go func() {
-		if scooterClient.ID != 0 {
-			for {
+		for {
+			resp, err := stream.Recv()
+			if err == io.EOF {
+				//close(done)
+				fmt.Println(err)
+				return
+			}
+
+			fmt.Printf("!!!!!!!!!!!!Received from server: %v\n", resp)
+
+			if err != nil {
+				log.Fatalf("can not receive %v", err)
+			}
+
+			destination.Latitude = resp.DestLatitude
+			destination.Longitude = resp.DestLongitude
+
+			scooterClient.Longitude = resp.Longitude
+			scooterClient.Latitude = resp.Latitude
+			scooterClient.BatteryRemain = resp.BatteryRemain
+			scooterClient.ID = resp.Id
+
+			fmt.Printf("Scooter client is:%v\n", scooterClient)
+			fmt.Printf("Destination is:%v\n", scooterClient)
+
+			inClient <- 1
+		}
+	}()
+
+	go func() {
+		for scooterClient.ID == 0 {
+			msg := &proto.ClientMessage{
+				Id:        scooterClient.ID,
+				Latitude:  scooterClient.Latitude,
+				Longitude: scooterClient.Longitude,
+			}
+
+			fmt.Printf("Send to server this message: %v\n", msg)
+			err := scooterClient.Stream.Send(msg)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			time.Sleep(time.Second * 3)
+
+			if scooterClient.ID != 0 {
 				err = scooterClient.Run(destination)
 				if err != nil {
 					fmt.Println(err)
@@ -83,28 +108,6 @@ func main() {
 		}
 	}()
 
-	go func() {
-		for {
-			resp, err := stream.Recv()
-			if err == io.EOF {
-				//close(done)
-				return
-			}
-
-			fmt.Printf("Received from server: %v", resp)
-
-			if err != nil {
-				log.Fatalf("can not receive %v", err)
-			}
-			scooterClient.Longitude = resp.Longitude
-			scooterClient.Latitude = resp.Latitude
-			scooterClient.BatteryRemain = resp.BatteryRemain
-			scooterClient.ID = resp.Id
-
-			destination.Latitude = resp.DestLatitude
-			destination.Longitude = resp.DestLongitude
-		}
-	}()
 
 	//go func() {
 	//	<-ctx.Done()

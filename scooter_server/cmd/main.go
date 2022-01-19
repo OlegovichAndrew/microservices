@@ -20,7 +20,7 @@ import (
 )
 
 var scooterIdMap = make(map[uint64]proto.ScooterService_RegisterServer)
-var Structure = make(chan *proto.ScooterClient)
+var StructCh = make(chan *proto.ScooterClient)
 
 func main() {
 	log.Println("Starting scooter microservice")
@@ -52,9 +52,9 @@ func main() {
 		fmt.Println(err)
 	}
 
-	handler := routing.NewRouter(scooterService, Structure)
+	handler := routing.NewRouter(scooterService, StructCh)
 
-	httpServer := httpserver.New(handler, httpserver.Port("8085"))
+	httpServer := httpserver.New(handler, StructCh, httpserver.Port("8085"))
 	handler.HandleFunc("/scooter", httpServer.ScooterHandler)
 
 	getIdFromStructInArray(scooterList, httpServer.ScooterIdMap)

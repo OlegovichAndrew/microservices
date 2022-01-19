@@ -35,13 +35,13 @@ type Routing interface {
 
 type handler struct {
 	scooterService *service.ScooterService
-	Structure chan *proto.ScooterClient
+	StructureCh chan *proto.ScooterClient
 }
 
 func newHandler(scooterService *service.ScooterService, structure chan *proto.ScooterClient ) *handler {
 	return &handler{
 		scooterService: scooterService,
-		Structure: structure,
+		StructureCh: structure,
 	}
 }
 
@@ -113,7 +113,7 @@ func (h *handler) startScooterTrip(w http.ResponseWriter, r *http.Request) {
 	//if err != nil {
 	//	fmt.Println(err)
 	//}
-	h.Structure <- &scooterForClient
+	h.StructureCh <- &scooterForClient
 	fmt.Println("Data has been sent")
 
 
