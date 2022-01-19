@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"html/template"
 	"net/http"
+	"scooter_micro/config"
 	"scooter_micro/proto"
 	"scooter_micro/service"
 	"strconv"
@@ -160,7 +161,8 @@ func (h *handler) showTripPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles("../scooter_server/templates/scooter-run.html")
+	//tmpl, err := template.ParseFiles("../scooter_server/templates/scooter-run.html")
+	tmpl, err := template.ParseFiles(config.MONO_TEMPLATES_PATH + "scooter-run.html")
 	if err != nil {
 		fmt.Println(err)
 	}
