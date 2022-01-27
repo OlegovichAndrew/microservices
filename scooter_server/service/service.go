@@ -27,6 +27,7 @@ type Location struct {
 type ScooterService struct {
 	Repo *repository.ScooterRepo
 	Order proto.OrderServiceClient
+	*proto.UnimplementedScooterServiceServer
 }
 
 //ScooterClient is a struct with parameters which will be translated by the gRPC connection.

@@ -13,14 +13,13 @@ const (
 	interval      = 450
 )
 
-
 //ScooterClient is a struct with parameters which will be translated by the gRPC connection.
 type ScooterClient struct {
 	ID            uint64
 	Latitude      float64
 	Longitude     float64
 	BatteryRemain float64
-	Stream proto.ScooterService_RegisterClient
+	Stream        proto.ScooterService_RegisterClient
 }
 
 //NewScooterClient creates a new GrpcScooterClient with given parameters.
@@ -56,7 +55,7 @@ func (s *ScooterClient) GrpcScooterMessage() {
 
 //Run is responsible for scooter's movements from his current position to the destination point.
 //Run also is responsible for scooter's discharge. Every step battery charge decrease by the constant discharge value.
-func (s *ScooterClient) Run(station model.Location) error {
+func (s *ScooterClient) Run(station model.Location) (*proto.SendStatus, error) {
 
 	switch {
 	case s.Latitude <= station.Latitude && s.Longitude <= station.Longitude:
@@ -120,8 +119,14 @@ func (s *ScooterClient) Run(station model.Location) error {
 			s.GrpcScooterMessage()
 		}
 	default:
-		return fmt.Errorf("error happened")
+		return nil, fmt.Errorf("error happened")
 	}
-	s.ID = 0
-	return nil
+	currentStatus := &proto.SendStatus{ScooterID: s.ID, Latitude: s.Latitude, Longitude: s.Longitude,
+		BatteryRemain: s.BatteryRemain}
+
+	defer func() {
+		s.ID = 0
+	}()
+
+	return currentStatus ,nil
 }

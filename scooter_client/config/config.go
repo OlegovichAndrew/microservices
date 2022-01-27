@@ -4,11 +4,21 @@ import (
 	"os"
 )
 
-var PG_HOST = os.Getenv("PG_HOST")
-var PG_PORT = os.Getenv("PG_PORT")
-var POSTGRES_DB = os.Getenv("POSTGRES_DB")
-var POSTGRES_USER = os.Getenv("POSTGRES_USER")
-var POSTGRES_PASSWORD = os.Getenv("POSTGRES_PASSWORD")
-var GRPC_PORT = os.Getenv("GRPC_PORT")
-var ORDER_GRPC_PORT = os.Getenv("ORDER_GRPC_PORT")
-var MONO_TEMPLATES_PATH = os.Getenv("MONO_TEMPLATES_PATH")
+var PG_HOST = getStringParameter("PG_HOST", "localhost")
+var PG_PORT = getStringParameter("PG_PORT", "5444")
+var POSTGRES_DB = getStringParameter("POSTGRES_DB", "scooterdb")
+var POSTGRES_USER = getStringParameter("POSTGRES_USER", "scooteradmin")
+var POSTGRES_PASSWORD = getStringParameter("POSTGRES_PASSWORD", "Megascooter!")
+var GRPC_PORT = getStringParameter("GRPC_PORT", "9000")
+var ORDER_GRPC_PORT = getStringParameter("ORDER_GRPC_PORT", "9999")
+var MONO_TEMPLATES_PATH = getStringParameter("MONO_TEMPLATES_PATH", "../scooter_server/templates/")
+var KAFKA_BROKER = getStringParameter("KAFKA_BROKER", "localhost:9093")
+var SERVER_CONN_GRPC_ADDRESS = getStringParameter("SERVER_CONN_GRPC_ADDRESS", ":9000")
+
+func getStringParameter(paramName, defaultValue string) string {
+	result, ok := os.LookupEnv(paramName)
+	if !ok {
+		result = defaultValue
+	}
+	return result
+}
