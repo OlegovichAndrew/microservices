@@ -10,7 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
+	"scooter_micro/config"
 	"scooter_micro/proto"
 	"scooter_micro/repository"
 	"scooter_micro/routing"
@@ -24,13 +24,12 @@ var StructCh = make(chan *proto.ScooterClient)
 
 func main() {
 	log.Println("Starting scooter microservice")
-	//connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 	connectionString := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
-		os.Getenv("POSTGRES_USER"),
-		os.Getenv("POSTGRES_PASSWORD"),
-		os.Getenv("PG_HOST"),
-		os.Getenv("PG_PORT"),
-		os.Getenv("POSTGRES_DB"))
+		config.POSTGRES_USER,
+		config.POSTGRES_PASSWORD,
+		config.PG_HOST,
+		config.PG_PORT,
+		config.POSTGRES_DB)
 
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
@@ -39,13 +38,13 @@ func main() {
 	defer db.Close()
 
 	scooterRepo := repository.NewScooterRepo(db)
-	conn, err := grpc.DialContext(context.Background(), net.JoinHostPort("", os.Getenv("ORDER_GRPC_PORT")),
+	conn, err := grpc.DialContext(context.Background(), net.JoinHostPort("", config.ORDER_GRPC_PORT),
 		grpc.WithInsecure())
 	if err != nil {
-		log.Printf("gRPC connection to %v port failed. With: %v\n", os.Getenv("ORDER_GRPC_PORT"), err)
+		log.Printf("gRPC connection to %v port failed. With: %v\n", config.ORDER_GRPC_PORT, err)
 	}
 
-	log.Printf("gRPC connected port: %v.", os.Getenv("ORDER_GRPC_PORT"))
+	log.Printf("gRPC connected port: %v.", config.ORDER_GRPC_PORT)
 
 	orderClient := proto.NewOrderServiceClient(conn)
 	scooterService := service.NewScooterService(scooterRepo, orderClient)
@@ -56,7 +55,7 @@ func main() {
 
 	handler := routing.NewRouter(scooterService, StructCh)
 
-	httpServer := httpserver.New(handler, StructCh, httpserver.Port("8085"))
+	httpServer := httpserver.New(handler, StructCh, scooterService, httpserver.Port(config.HTTP_PORT))
 	handler.HandleFunc("/scooter", httpServer.ScooterHandler)
 
 	getIdFromStructInArray(scooterList, httpServer.ScooterIdMap)
@@ -64,7 +63,7 @@ func main() {
 	proto.RegisterScooterServiceServer(grpcServer, httpServer)
 	reflection.Register(grpcServer)
 
-	http.ListenAndServe(":8085", handler)
+	http.ListenAndServe(":" + config.HTTP_PORT, handler)
 }
 
 func getIdFromStructInArray(from *proto.ScooterList,

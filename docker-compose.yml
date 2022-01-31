@@ -1,14 +1,46 @@
 version: "3.9"
 
 services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: scooter_zookeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - scooternet
+
+  kafka:
+    image: bitnami/kafka:3.0.0
+    container_name: scooter_kafka
+    ports:
+      - "9093:9093"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka:9092,EXTERNAL://localhost:9093
+      - KAFKA_INTER_BROKER_LISTENER_NAME=CLIENT
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - zookeeper
+    networks:
+      - scooternet
+
   scooter_server:
     container_name: scooter_server
     build:
       context: scooter_server
       dockerfile: Dockerfile
+    depends_on:
+      - "zookeeper"
+      - "kafka"
     ports:
       - "9000:9000"
-      - "8085:8085"
+      - "8080:8080"
     env_file:
       - .env
     networks:
@@ -19,9 +51,26 @@ services:
       context: scooter_client
       dockerfile: Dockerfile
     depends_on:
+      - "zookeeper"
+      - "kafka"
       - "scooter_server"
     ports:
         - "5000"
+    env_file:
+      - .env
+    networks:
+      - scooternet
+
+  order_service:
+    build:
+      context: order_service
+      dockerfile: Dockerfile
+    depends_on:
+      - "zookeeper"
+      - "kafka"
+      - "scooter_server"
+    ports:
+      - "9999"
     env_file:
       - .env
     networks:

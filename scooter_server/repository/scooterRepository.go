@@ -234,8 +234,9 @@ func (scr *ScooterRepo) SendCurrentStatus(ctx context.Context, status *proto.Sen
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 		}
 	}()
+	fmt.Printf("Current coordinates were written to the Database.\n")
 	return &proto.Response{}, err
 }

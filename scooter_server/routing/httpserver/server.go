@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"io"
 	"log"
 	"net"
 	"net/http"
 	"scooter_micro/proto"
+	"scooter_micro/service"
 	"time"
 )
 
@@ -25,7 +25,8 @@ const (
 
 //Client is a client's struct who connects to the "scooter-run" page.
 type Client struct {
-	w    io.Writer
+	//w    io.Writer
+	w    http.ResponseWriter
 	done chan struct{}
 }
 
@@ -40,13 +41,15 @@ type Server struct {
 	in              chan *proto.ClientMessage
 	StructureCh     chan *proto.ScooterClient
 	ScooterIdMap    map[uint64]proto.ScooterService_RegisterServer
-	*proto.UnimplementedScooterServiceServer
+	proto.UnimplementedScooterServiceServer
+	ScooterService *service.ScooterService
 }
 
 type Option func(*Server)
 
 //New creates and starts the http-server
-func New(handler http.Handler, structure chan *proto.ScooterClient, opts ...Option) *Server {
+func New(handler http.Handler, structure chan *proto.ScooterClient, scooterService *service.ScooterService,
+	opts ...Option) *Server {
 	httpServer := &http.Server{
 		Handler:      handler,
 		ReadTimeout:  defaultReadTimeout,
@@ -65,6 +68,7 @@ func New(handler http.Handler, structure chan *proto.ScooterClient, opts ...Opti
 		in:              make(chan *proto.ClientMessage),
 		StructureCh:     structure,
 		ScooterIdMap:    make(map[uint64]proto.ScooterService_RegisterServer),
+		ScooterService:  scooterService,
 	}
 
 	for _, opt := range opts {
@@ -112,7 +116,8 @@ func (s *Server) ScooterHandler(w http.ResponseWriter, r *http.Request) {
 
 //AddClient is a Server's function for adding attached Client.
 func (s *Server) AddClient(c *Client) {
-	s.client[1] = c
+	//s.client[1] = c
+	s.client[len(s.client)] = c
 }
 
 func (s *Server) MatchStreamToScooterId(ctx context.Context, stream proto.ScooterService_RegisterServer) {
@@ -139,16 +144,13 @@ func (s *Server) Register(stream proto.ScooterService_RegisterServer) error {
 		fmt.Printf("This is msg:%v before condition\n", msg)
 
 		if msg.Id > 0 {
-			fmt.Printf("InLoop received MSG:%v\n", err)
 			s.in <- msg
 		}
 
 		select {
 		case data := <-s.StructureCh:
 			fmt.Printf("Data has been received : %v", data)
-			scoot := &proto.ScooterClient{Id: data.Id, Latitude: data.Latitude, Longitude: data.Longitude,
-				BatteryRemain: data.BatteryRemain, DestLatitude: data.DestLatitude, DestLongitude: data.DestLongitude}
-			err = stream.Send(scoot)
+			err = stream.Send(data)
 			if err != nil {
 				log.Printf("send error %v", err)
 			}
@@ -190,8 +192,8 @@ func (s *Server) run() {
 					go func(c *Client) {
 						if _, err := fmt.Fprintf(c.w, "data: %v\n\n", buf.String()); err != nil {
 							fmt.Println(err)
-							delete(s.client, 1)
-							close(c.done)
+							//delete(s.client, 1)
+							//close(c.done)
 							return
 						}
 
@@ -204,4 +206,19 @@ func (s *Server) run() {
 			}
 		}
 	}()
+}
+
+func (s *Server) SendCurrentStatus(ctx context.Context, status *proto.SendStatus) (*proto.Response, error) {
+	return s.ScooterService.Repo.SendCurrentStatus(ctx, status)
+}
+
+//GetScooterStatus gives the access to the ScooterRepo.GetScooterStatus function.
+func (s *Server) GetScooterStatus(ctx context.Context, status *proto.ScooterID) (*proto.ScooterStatus, error) {
+	return s.ScooterService.Repo.GetScooterStatus(ctx, status)
+}
+
+//CreateScooterStatusInRent gives the access to the ScooterRepo.CreateScooterStatusInRent function.
+func (s *Server) CreateScooterStatusInRent(ctx context.Context, id *proto.ScooterID) (*proto.ScooterStatusInRent,
+	error) {
+	return s.ScooterService.Repo.CreateScooterStatusInRent(ctx, id)
 }

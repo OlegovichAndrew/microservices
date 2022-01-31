@@ -39,6 +39,7 @@ message Scooter {
   double maxWeight = 3;
   double batteryRemain = 4;
   bool canBeRent = 5;
+  int64 stationID = 6;
 }
 
 message ScooterClient {
@@ -48,6 +49,7 @@ message ScooterClient {
   double batteryRemain = 4;
   double destLatitude = 5;
   double destLongitude = 6;
+  int64 stationID = 7;
 }
 
 message ScooterList {

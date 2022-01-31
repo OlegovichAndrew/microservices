@@ -101,7 +101,7 @@ func (h *handler) startScooterTrip(w http.ResponseWriter, r *http.Request) {
 
 	scooterForClient := proto.ScooterClient{Id: uint64(chosenScooterID), Latitude:scooterStatus.Latitude,
 		Longitude: scooterStatus.Longitude, BatteryRemain: scooterStatus.BatteryRemain,
-		DestLatitude: station.Latitude, DestLongitude: station.Longitude}
+		DestLatitude: station.Latitude, DestLongitude: station.Longitude, StationID: int64(chosenStationID)}
 
 	fmt.Printf("ScooterForClient: %v\n", &scooterForClient)
 
