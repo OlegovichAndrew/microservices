@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/Shopify/sarama"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 	"io"
@@ -11,16 +13,22 @@ import (
 	"scooter_client/model"
 	"scooter_client/proto"
 	"scooter_client/service"
+	"scooter_client/transport"
 	"time"
 )
 
 var destination model.Location
+
+const ClientID = "some_client"
+const TopicName = "order"
+
 
 func main() {
 	conn, err := grpc.Dial(config.SERVER_CONN_GRPC_ADDRESS, grpc.WithInsecure() )
 	if err != nil {
 		log.Printf("gRPC connection to %v port failed. With: %v\n", config.GRPC_PORT, err)
 	}
+
 
 	log.Printf("gRPC connected port: %v.", config.GRPC_PORT)
 
@@ -35,6 +43,15 @@ func main() {
 	done := make(chan bool)
 	var currentStationID uint64
 	scooterClient := service.NewScooterClient(0, 0.0, 0.0, 0.0, stream)
+
+	producer := transport.CreateProducer([]string{config.KAFKA_BROKER}, ClientID)
+
+	err = transport.CreateTopic([]string{config.KAFKA_BROKER}, TopicName, 1, 1)
+	if err != nil && err.(*sarama.TopicError).Err != sarama.ErrTopicAlreadyExists {
+		log.Fatalln("Failed to create kafka topic:", err)
+		return
+	}
+
 
 	go func() {
 		for {
@@ -82,6 +99,11 @@ func main() {
 				if err != nil {
 					fmt.Println(err)
 				}
+
+				msg, err := json.Marshal(currentStatus)
+				if err != nil {fmt.Println(err)}
+				err = transport.SendMessage(producer, TopicName, string(msg))
+				if err != nil {fmt.Println(err)}
 			}
 			// a mock message for keeping the stream.
 			msg := &proto.ClientMessage{
@@ -112,3 +134,4 @@ func main() {
 	<-done
 
 }
+

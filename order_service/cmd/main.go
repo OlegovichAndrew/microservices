@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
@@ -12,7 +13,13 @@ import (
 	"order_micro/proto"
 	"order_micro/repository"
 	"order_micro/service"
+	"order_micro/transport"
 )
+
+const TopicName = "order"
+const ClientID = "some_client"
+const GroupConsumer = "some_group"
+
 
 func main() {
 	log.Println("Starting order microservice")
@@ -31,6 +38,14 @@ func main() {
 
 	orderRepo := repository.NewOrderRepo(db)
 	service := service.NewOrderService(orderRepo)
+
+	group := transport.CreateConsumerGroup([]string{config.KAFKA_BROKER}, ClientID, GroupConsumer)
+
+	go func() {
+		for  {
+			transport.ConsumeMessages(context.Background(), group, TopicName)
+		}
+	}()
 
 	listener, err := net.Listen("tcp", net.JoinHostPort("", config.ORDER_GRPC_PORT))
 	if err != nil {

@@ -35,9 +35,12 @@ services:
     build:
       context: scooter_server
       dockerfile: Dockerfile
+    depends_on:
+      - "zookeeper"
+      - "kafka"
     ports:
       - "9000:9000"
-      - "8085:8085"
+      - "8080:8080"
     env_file:
       - .env
     networks:
@@ -48,9 +51,26 @@ services:
       context: scooter_client
       dockerfile: Dockerfile
     depends_on:
+      - "zookeeper"
+      - "kafka"
       - "scooter_server"
     ports:
         - "5000"
+    env_file:
+      - .env
+    networks:
+      - scooternet
+
+  order_service:
+    build:
+      context: order_service
+      dockerfile: Dockerfile
+    depends_on:
+      - "zookeeper"
+      - "kafka"
+      - "scooter_server"
+    ports:
+      - "9999"
     env_file:
       - .env
     networks:
