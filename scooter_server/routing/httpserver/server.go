@@ -208,7 +208,7 @@ func (s *Server) run() {
 	}()
 }
 
-func (s *Server) SendCurrentStatus(ctx context.Context, status *proto.SendStatus) (*proto.Response, error) {
+func (s *Server) SendCurrentStatus(ctx context.Context, status *proto.SendStatus) error {
 	return s.ScooterService.Repo.SendCurrentStatus(ctx, status)
 }
 
