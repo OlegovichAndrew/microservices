@@ -5,19 +5,19 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
-	"os"
 	"os/exec"
 )
+
 var count string
 
 func main() {
 	log.Println("Starting scooter Initiation")
-	connectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("PG_HOST"),
-		os.Getenv("PG_PORT"),
-		os.Getenv("POSTGRES_USER"),
-		os.Getenv("POSTGRES_PASSWORD"),
-		os.Getenv("POSTGRES_DB"))
+	connectionString := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
+		POSTGRES_USER,
+		POSTGRES_PASSWORD,
+		PG_HOST,
+		PG_PORT,
+		POSTGRES_DB)
 
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
@@ -38,7 +38,7 @@ func main() {
 
 func scootersInit() {
 	fmt.Println("scooter containers creating...")
-	command := exec.Command("docker-compose", "up", "-d", "--scale", "scooter_client=" + count)
+	command := exec.Command("docker-compose", "up", "-d", "--scale", "scooter_client="+count)
 	fmt.Println(command.String())
 	err := command.Run()
 	if err != nil {

@@ -2,7 +2,6 @@ module scooter_micro
 
 go 1.17
 
-
 //replace scooter_client => ../scooter_client/
 
 require (
