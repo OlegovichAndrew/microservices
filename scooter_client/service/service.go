@@ -1,7 +1,9 @@
 package service
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"scooter_client/model"
 	"scooter_client/proto"
 	"time"
@@ -35,10 +37,15 @@ func NewScooterClient(id uint64, latitude, longitude, battery float64,
 }
 
 //GrpcScooterMessage sends the message be gRPC stream in a format which defined in the *proto file.
-func (s *ScooterClient) GrpcScooterMessage() {
+func (s *ScooterClient) GrpcScooterMessage() error {
 	intPol := time.Duration(interval) * time.Millisecond
 
 	fmt.Println("executing run in client")
+
+	if s.ID <= 0 {
+		return errors.New("ID shouldn't be zero or below")
+	}
+
 	msg := proto.ClientMessage{
 		Id:        s.ID,
 		Latitude:  s.Latitude,
@@ -47,10 +54,17 @@ func (s *ScooterClient) GrpcScooterMessage() {
 
 	fmt.Printf("Send to server this message: %v\n", &msg)
 	err := s.Stream.Send(&msg)
+	if err == io.EOF {
+		fmt.Println("server recv eof")
+		return nil
+	}
+
 	if err != nil {
 		fmt.Println(err)
+		return err
 	}
 	time.Sleep(intPol)
+	return nil
 }
 
 //Run is responsible for scooter's movements from his current position to the destination point.
@@ -128,5 +142,5 @@ func (s *ScooterClient) Run(station model.Location) (*proto.SendStatus, error) {
 		s.ID = 0
 	}()
 
-	return currentStatus ,nil
+	return currentStatus, nil
 }
