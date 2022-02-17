@@ -1,5 +1,7 @@
 package repository
 
+//go:generate mockgen -destination=./mock/mock_scooterRepository.go -package=mock -source=./scooterRepository.go
+
 import (
 	"context"
 	"database/sql"
@@ -10,16 +12,15 @@ import (
 	"time"
 )
 
-//ScooterRepository the interface which implemented by functions which connect to the database.
 type ScooterRepository interface {
-	GetAllScooters(ctx context.Context, request *proto.Request) (*proto.ScooterList, error)
 	GetAllScootersByStationID(context context.Context, id *proto.StationID) (*proto.ScooterList, error)
 	GetScooterById(context context.Context, id *proto.ScooterID) (*proto.Scooter, error)
 	GetScooterStatus(context context.Context, id *proto.ScooterID) (*proto.ScooterStatus, error)
-	SendCurrentStatus(context context.Context, status *proto.SendStatus) (*proto.Response, error)
+	SendCurrentStatus(context context.Context, status *proto.SendStatus) error
 	CreateScooterStatusInRent(context context.Context, id *proto.ScooterID) (*proto.ScooterStatusInRent, error)
-	GetStationById(ctx context.Context,id *proto.StationID) (*proto.Station, error)
+	GetStationById(ctx context.Context, id *proto.StationID) (*proto.Station, error)
 	GetAllStations(ctx context.Context, request *proto.Request) (*proto.StationList, error)
+	GetAllScooters(ctx context.Context, request *proto.Request) (*proto.ScooterList, error)
 }
 
 type ScooterRepo struct {
@@ -169,7 +170,6 @@ func (scr *ScooterRepo) GetStationById(ctx context.Context, id *proto.StationID)
 func (scr *ScooterRepo) GetScooterStatus(ctx context.Context, id *proto.ScooterID) (*proto.ScooterStatus, error) {
 	var scooterStatus = proto.ScooterStatus{}
 
-
 	querySQL := `SELECT battery_remain, latitude, longitude 
 					FROM scooter_statuses
 					WHERE scooter_id=$1`
@@ -217,7 +217,7 @@ func (scr *ScooterRepo) CreateScooterStatusInRent(ctx context.Context,
 }
 
 //SendCurrentStatus updates ScooterStatus with given parameters.
-func (scr *ScooterRepo) SendCurrentStatus(ctx context.Context, status *proto.SendStatus) (*proto.Response, error) {
+func (scr *ScooterRepo) SendCurrentStatus(ctx context.Context, status *proto.SendStatus) error {
 	var canBeRent bool
 	if status.BatteryRemain > 10 {
 		canBeRent = true
@@ -238,5 +238,5 @@ func (scr *ScooterRepo) SendCurrentStatus(ctx context.Context, status *proto.Sen
 		}
 	}()
 	fmt.Printf("Current coordinates were written to the Database.\n")
-	return &proto.Response{}, err
+	return err
 }
